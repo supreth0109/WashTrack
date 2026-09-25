@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Laundry - WashTrack Portal</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    
+    .step-completed { background-color: #10b981; color: #ffffff; border-color: #10b981; }
+    .step-active { background-color: #4f46e5; color: #ffffff; border-color: #4f46e5; box-shadow: 0 0 10px rgba(79, 70, 229, 0.4); }
+    .step-pending { background-color: #f1f5f9; color: #94a3b8; border-color: #cbd5e1; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printableReceiptArea, #printableReceiptArea * { visibility: visible; }
+      #printableReceiptArea { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen">
+  
+  <!-- Header / Navigation Bar -->
+  <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
+    <div class="w-full px-4 sm:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo / Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchRole(currentRole)">
+        <img src="washtrack_logo.png" alt="WashTrack Logo" class="h-12 max-h-12 w-auto object-contain py-1" 
+          onerror="this.style.display='none'; document.getElementById('svgFallbackLogo').classList.remove('hidden');">
+        
+        <div id="svgFallbackLogo" class="hidden flex items-center space-x-3">
+          <div class="bg-white text-indigo-600 p-2 rounded-lg shadow-sm">
+            <i class="fa-solid fa-shirt text-xl"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg leading-tight">Smart Laundry</h1>
+            <p class="text-xs text-indigo-200">Campus Laundry Management System</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Role Switcher Pills -->
+      <div class="flex items-center space-x-3">
+        <div class="bg-indigo-700/80 p-1 rounded-xl flex text-xs font-semibold">
+          <button id="btnRoleStudent" onclick="switchRole('student')" class="px-3.5 py-1.5 rounded-lg transition duration-150 text-indigo-100 hover:text-white font-semibold flex items-center">
+            <i class="fa-solid fa-user-graduate mr-1.5"></i> Student Portal
+          </button>
+          <button id="btnRoleStaff" onclick="switchRole('staff')" class="px-3.5 py-1.5 rounded-lg transition duration-150 bg-white text-indigo-700 shadow-sm font-bold flex items-center">
+            <i class="fa-solid fa-user-gear mr-1.5"></i> Staff Portal
+          </button>
+        </div>
+
+        <button id="btnLogout" onclick="logout()" class="hidden text-xs bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-lg transition">
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ========================================== -->
+    <!-- 1. STUDENT LOGIN SCREEN                    -->
+    <!-- ========================================== -->
+    <section id="studentLoginSection" class="hidden max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-100 my-4">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+          <i class="fa-solid fa-user-graduate"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">Student Portal Login</h2>
+        <p class="text-sm text-gray-500 mt-1">Track your laundry orders & weekly quota</p>
+      </div>
+
+      <form onsubmit="handleStudentLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Registration Number *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400">
+              <i class="fa-solid fa-id-card"></i>
+            </span>
+            <input type="text" id="inputStudentReg" required placeholder="e.g. 21BCE0001" value="21BCE0001"
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Student Name</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400">
+              <i class="fa-solid fa-user"></i>
+            </span>
+            <input type="text" id="inputStudentName" placeholder="e.g. Alex Smith" value="Alex Smith"
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Hostel Block *</label>
+            <select id="inputStudentHostel" required class="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none font-medium">
+              <option value="Block A (Men's)">Block A (Men's)</option>
+              <option value="Block B (Men's)">Block B (Men's)</option>
+              <option value="Block C (Ladies')">Block C (Ladies')</option>
+              <option value="Block D (Ladies')">Block D (Ladies')</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Room No *</label>
+            <input type="text" id="inputStudentRoom" required placeholder="e.g. 302" value="302"
+              class="w-full px-3 py-2.5 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Mobile Phone Number *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400">
+              <i class="fa-solid fa-phone"></i>
+            </span>
+            <input type="tel" id="inputStudentPhone" required placeholder="e.g. +91 9876543210" value="+91 9876543210"
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl shadow-md transition flex items-center justify-center text-sm">
+          <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Access Student Dashboard
+        </button>
+      </form>
+
+      <div class="mt-6 pt-6 border-t border-gray-100 text-center">
+        <p class="text-xs text-gray-500">Are you a laundry staff member?</p>
+        <button onclick="switchRole('staff')" class="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center">
+          Switch to Staff Portal <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- 2. STUDENT DASHBOARD SCREEN                -->
+    <!-- ========================================== -->
+    <section id="studentDashboardSection" class="hidden space-y-6">
+      
+      <!-- Welcome Banner -->
+      <div class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <span class="bg-indigo-500/40 text-indigo-100 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-400/30 mb-2 inline-block">
+            <i class="fa-solid fa-building-user mr-1"></i> <span id="displayStudentHostelRoom">Block A (Men's) • Room 302</span>
+          </span>
+          <h2 id="displayStudentWelcome" class="text-2xl font-bold">Welcome, Student</h2>
+          <p id="displayStudentReg" class="text-sm text-indigo-100 mt-1">Registration No: 21BCE0001 | Phone: +91 9876543210</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="openComplaintModal()" class="bg-rose-500 hover:bg-rose-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center shadow-md">
+            <i class="fa-solid fa-circle-exclamation mr-1.5"></i> File a Complaint
+          </button>
+          <button onclick="refreshAndRender()" class="bg-white/20 hover:bg-white/30 text-white px-3.5 py-2 rounded-xl text-xs font-bold backdrop-blur-sm transition flex items-center">
+            <i class="fa-solid fa-rotate-right mr-1.5"></i> Refresh Orders
+          </button>
+        </div>
+      </div>
+
+      <!-- Weekly Allowance Quota Widget + Quick Metrics Bar -->
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        
+        <!-- Weekly Quota Widget -->
+        <div class="md:col-span-2 bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-sm border border-indigo-900/50 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-scale-balanced"></i>
+              </span>
+              <div>
+                <h4 class="font-bold text-sm text-white">Weekly Free Allowance</h4>
+                <p class="text-[11px] text-indigo-300">10 Free Laundry Items / Week</p>
+              </div>
+            </div>
+            <span id="quotaBadgeText" class="text-xs font-bold bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30">
+              6 Free Left
+            </span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="space-y-1.5 mt-2">
+            <div class="flex justify-between text-xs font-medium text-indigo-200">
+              <span id="displayQuotaUsedText">4 / 10 Items Used</span>
+              <span id="displayQuotaPercent">40%</span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+              <div id="displayQuotaBar" class="bg-emerald-400 h-2.5 rounded-full transition-all duration-500" style="width: 40%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric 1: Total Intake Bags -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center space-x-4">
+          <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-box-archive"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-bold uppercase">Total Bags Intake</p>
+            <h4 id="studentStatTotal" class="text-xl font-bold text-gray-900">0</h4>
+          </div>
+        </div>
+
+        <!-- Metric 2: Processing -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center space-x-4">
+          <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-soap"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-bold uppercase">In Wash</p>
+            <h4 id="studentStatActive" class="text-xl font-bold text-gray-900">0</h4>
+          </div>
+        </div>
+
+        <!-- Metric 3: Delivered -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 flex items-center space-x-4">
+          <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 font-bold uppercase">Delivered</p>
+            <h4 id="studentStatCompleted" class="text-xl font-bold text-gray-900">0</h4>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Filter & Search Bar -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="relative w-full sm:w-72">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+          </span>
+          <input type="text" id="studentSearch" oninput="renderStudentOrders()" placeholder="Search by Token / Clothes..."
+            class="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-bold text-gray-400 uppercase mr-1">Filter:</span>
+          <button id="filterAll" onclick="setStudentFilter('ALL')" class="filter-btn text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white font-bold transition">All Orders</button>
+          <button id="filterActive" onclick="setStudentFilter('Active')" class="filter-btn text-xs px-3.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold transition">Active Wash</button>
+          <button id="filterDelivered" onclick="setStudentFilter('Delivered')" class="filter-btn text-xs px-3.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold transition">Delivered</button>
+        </div>
+      </div>
+
+      <!-- Orders Dynamic List Cards -->
+      <div id="studentOrdersList" class="space-y-4">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- 3. STAFF LOGIN SCREEN                      -->
+    <!-- ========================================== -->
+    <section id="staffLoginSection" class="hidden max-w-md mx-auto bg-white p-8 rounded-2xl shadow-xl border border-gray-100 my-8">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+          <i class="fa-solid fa-user-gear"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900">Laundry Staff Portal</h2>
+        <p class="text-sm text-gray-500 mt-1">Order Intake, OTP Verification & Handover</p>
+      </div>
+
+      <form onsubmit="handleStaffLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Staff ID / Email *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400">
+              <i class="fa-solid fa-envelope"></i>
+            </span>
+            <input type="text" id="inputStaffEmail" required placeholder="staff01@laundry.edu" value="staff01@laundry.edu"
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 outline-none text-sm font-medium">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Access PIN / Password *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="password" id="inputStaffPass" required placeholder="••••••••" value="password123"
+              class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 outline-none text-sm font-medium">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl shadow-md transition flex items-center justify-center text-sm">
+          <i class="fa-solid fa-right-to-bracket mr-2"></i> Authenticate & Open Portal
+        </button>
+      </form>
+
+      <div class="mt-6 pt-6 border-t border-gray-100 text-center">
+        <p class="text-xs text-gray-500">Are you a student?</p>
+        <button onclick="switchRole('student')" class="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center">
+          Switch to Student Portal <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- 4. STAFF DASHBOARD SCREEN                  -->
+    <!-- ========================================== -->
+    <section id="staffDashboardSection" class="hidden space-y-6">
+      
+      <!-- Top Staff Header Banner -->
+      <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <span class="bg-purple-500/30 text-purple-300 text-xs font-semibold px-3 py-1 rounded-full border border-purple-400/30 mb-2 inline-block">
+            <i class="fa-solid fa-shield-halved mr-1"></i> Staff Handling Counter
+          </span>
+          <h2 class="text-2xl font-bold">Laundry Staff Management Dashboard</h2>
+          <p class="text-sm text-slate-300 mt-1">Station ID: STAFF01 | Mandatory 6-Digit Student OTP Verification for Handover</p>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <span class="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1.5 rounded-xl border border-emerald-500/30">
+            <i class="fa-solid fa-key mr-1"></i> Student OTP Authentication Required
+          </span>
+        </div>
+      </div>
+
+      <!-- STAFF ORDERS INTAKE & MANAGEMENT -->
+      <div class="space-y-6">
+        
+        <!-- Submit Order Form Card & Orders List Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Left Column: Multi-Item Clothing Selector Intake Form -->
+          <div class="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit sticky top-20">
+            <div class="flex items-center space-x-2 border-b border-gray-100 pb-4 mb-4">
+              <div class="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                <i class="fa-solid fa-plus text-sm"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-900 text-base">Submit Laundry Order</h3>
+                <p class="text-xs text-gray-500">Select clothing items & student details</p>
+              </div>
+            </div>
+
+            <form onsubmit="handleStaffSubmitOrder(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Student Reg No *</label>
+                <input type="text" id="inputFormReg" required placeholder="e.g. 21BCE0001" oninput="updateFormPreviews()"
+                  class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 outline-none font-medium">
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Hostel Block</label>
+                  <select id="inputFormHostel" class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 outline-none font-medium">
+                    <option value="Block A (Men's)">Block A (Men's)</option>
+                    <option value="Block B (Men's)">Block B (Men's)</option>
+                    <option value="Block C (Ladies')">Block C (Ladies')</option>
+                    <option value="Block D (Ladies')">Block D (Ladies')</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Room No</label>
+                  <input type="text" id="inputFormRoom" placeholder="302" value="302"
+                    class="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 outline-none font-medium">
+                </div>
+              </div>
+
+              <!-- Interactive Clothing Quantities Selector Form -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="block text-xs font-bold text-gray-600 uppercase">Select Clothing Types & Quantities *</label>
+                  <span id="badgeTotalItems" class="bg-purple-100 text-purple-700 font-bold text-xs px-2.5 py-0.5 rounded-full">0 Total Items</span>
+                </div>
+
+                <!-- Clothing Items Grid List -->
+                <div class="space-y-2 max-h-56 overflow-y-auto pr-1 border border-gray-200 rounded-xl p-3 bg-gray-50/50">
+                  
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-sm">👔</span>
+                      <span class="text-xs font-bold text-gray-800">Shirts</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                      <button type="button" onclick="adjustQty('shirt', -1)" class="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs">-</button>
+                      <input type="number" id="qty_shirt" value="0" min="0" onchange="updateFormPreviews()" class="w-10 text-center text-xs font-bold py-0.5 border rounded">
+                      <button type="button" onclick="adjustQty('shirt', 1)" class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs">+</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-sm">👕</span>
+                      <span class="text-xs font-bold text-gray-800">T-Shirts</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                      <button type="button" onclick="adjustQty('tshirt', -1)" class="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs">-</button>
+                      <input type="number" id="qty_tshirt" value="0" min="0" onchange="updateFormPreviews()" class="w-10 text-center text-xs font-bold py-0.5 border rounded">
+                      <button type="button" onclick="adjustQty('tshirt', 1)" class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs">+</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-sm">👖</span>
+                      <span class="text-xs font-bold text-gray-800">Pants / Jeans</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                      <button type="button" onclick="adjustQty('pant', -1)" class="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs">-</button>
+                      <input type="number" id="qty_pant" value="0" min="0" onchange="updateFormPreviews()" class="w-10 text-center text-xs font-bold py-0.5 border rounded">
+                      <button type="button" onclick="adjustQty('pant', 1)" class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs">+</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-sm">🩳</span>
+                      <span class="text-xs font-bold text-gray-800">Shorts</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                      <button type="button" onclick="adjustQty('shorts', -1)" class="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs">-</button>
+                      <input type="number" id="qty_shorts" value="0" min="0" onchange="updateFormPreviews()" class="w-10 text-center text-xs font-bold py-0.5 border rounded">
+                      <button type="button" onclick="adjustQty('shorts', 1)" class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs">+</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-sm">🧥</span>
+                      <span class="text-xs font-bold text-gray-800">Jackets</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                      <button type="button" onclick="adjustQty('jacket', -1)" class="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs">-</button>
+                      <input type="number" id="qty_jacket" value="0" min="0" onchange="updateFormPreviews()" class="w-10 text-center text-xs font-bold py-0.5 border rounded">
+                      <button type="button" onclick="adjustQty('jacket', 1)" class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs">+</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-sm">🧺</span>
+                      <span class="text-xs font-bold text-gray-800">Towels / Sheets</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                      <button type="button" onclick="adjustQty('towel', -1)" class="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs">-</button>
+                      <input type="number" id="qty_towel" value="0" min="0" onchange="updateFormPreviews()" class="w-10 text-center text-xs font-bold py-0.5 border rounded">
+                      <button type="button" onclick="adjustQty('towel', 1)" class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs">+</button>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                    <div class="flex items-center space-x-2">
+                      <span class="text-sm">🧦</span>
+                      <span class="text-xs font-bold text-gray-800">Misc / Socks</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                      <button type="button" onclick="adjustQty('others', -1)" class="w-6 h-6 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs">-</button>
+                      <input type="number" id="qty_others" value="0" min="0" onchange="updateFormPreviews()" class="w-10 text-center text-xs font-bold py-0.5 border rounded">
+                      <button type="button" onclick="adjustQty('others', 1)" class="w-6 h-6 rounded bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold text-xs">+</button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Ironing Service Toggle -->
+              <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                  <div class="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center text-base">
+                    🔥
+                  </div>
+                  <div>
+                    <p class="text-xs font-bold text-gray-900">Ironing Service</p>
+                    <p class="text-[10px] text-gray-500">Student has requested ironing for this batch</p>
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer ml-3">
+                  <input type="checkbox" id="checkIroning" class="sr-only peer">
+                  <div class="w-10 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-amber-300 rounded-full peer peer-checked:bg-amber-500 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                </label>
+              </div>
+
+              <!-- Order Generated Summary & Token Preview Card -->
+              <div class="bg-purple-50/70 p-3.5 rounded-xl border border-purple-100 space-y-1 text-xs">
+                <div class="flex justify-between font-medium text-gray-600">
+                  <span>Items Selected:</span>
+                  <span id="previewClothesSummary" class="font-bold text-purple-900 truncate max-w-[160px]">No items selected</span>
+                </div>
+                <div class="flex justify-between items-center pt-1 border-t border-purple-200/50">
+                  <span class="font-bold text-gray-700">Auto Generated Token:</span>
+                  <span id="previewToken" class="font-mono font-bold bg-white text-purple-700 px-2 py-0.5 rounded border border-purple-200">TK-21BCE0001-103</span>
+                </div>
+              </div>
+
+              <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl shadow-md transition flex items-center justify-center text-sm">
+                <i class="fa-solid fa-qrcode mr-2"></i> Create Order & Generate Token
+              </button>
+            </form>
+          </div>
+
+          <!-- Right Column: Staff Orders Intake List & Quick Search -->
+          <div class="lg:col-span-2 space-y-4">
+            
+            <!-- Quick Search Filter Bar -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div class="relative w-full sm:w-80">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-purple-500">
+                  <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </span>
+                <input type="text" id="staffSearchInput" oninput="renderStaffOrders()" placeholder="Search Token ID or Student Reg No..."
+                  class="w-full pl-10 pr-3 py-2 text-xs font-medium rounded-xl border border-purple-200 focus:ring-2 focus:ring-purple-500 outline-none">
+              </div>
+
+              <div class="flex items-center space-x-2 text-xs">
+                <span class="text-gray-400 font-bold">Filter:</span>
+                <select id="staffStatusFilter" onchange="renderStaffOrders()" class="px-3 py-1.5 rounded-lg border border-gray-300 font-semibold text-xs outline-none">
+                  <option value="ALL">All Active & History</option>
+                  <option value="Submitted">Submitted (Intake)</option>
+                  <option value="In Wash">In Wash</option>
+                  <option value="Ready for Pickup">Ready for Pickup</option>
+                  <option value="Delivered">Delivered</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Orders Table Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-bold text-gray-900 text-sm">Live Orders & Handover Workflow</h3>
+                <span id="staffOrderCountBadge" class="bg-gray-100 text-gray-700 text-xs font-bold px-2.5 py-1 rounded-full">0 Orders</span>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200 text-[11px] uppercase font-bold text-gray-500">
+                      <th class="p-3.5">Token ID & Student</th>
+                      <th class="p-3.5">Hostel & Contact</th>
+                      <th class="p-3.5">Clothing Intake</th>
+                      <th class="p-3.5">Status & Stage</th>
+                      <th class="p-3.5 text-right">Handover & OTP Verification</th>
+                    </tr>
+                  </thead>
+                  <tbody id="staffOrdersTableBody" class="divide-y divide-gray-100 text-xs font-medium">
+                    <!-- Injected via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Staff Complaints Inbox Card -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+          <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center text-lg font-bold">
+                <i class="fa-solid fa-inbox"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-gray-900 text-base">Student Complaints Inbox</h3>
+                <p class="text-xs text-gray-500">Address student missing item / damage reports</p>
+              </div>
+            </div>
+            <span id="badgeOpenComplaints" class="bg-rose-100 text-rose-700 text-xs font-bold px-3 py-1 rounded-full">0 Open Reports</span>
+          </div>
+
+          <div id="staffComplaintsList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Rendered via JavaScript -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL 1: STUDENT COMPLAINT MODAL           -->
+  <!-- ========================================== -->
+  <div id="complaintModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-lg w-full rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-fadeIn">
+      
+      <div class="p-5 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center text-lg">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-gray-900">File a Student Complaint</h3>
+            <p class="text-xs text-gray-500">Send issue report directly to handling staff</p>
+          </div>
+        </div>
+        <button onclick="closeComplaintModal()" class="text-gray-400 hover:text-gray-600 p-2 rounded-xl transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form onsubmit="submitStudentComplaint(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Select Order Token *</label>
+          <select id="complaintTokenSelect" required onchange="onComplaintTokenChange()" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-rose-500 outline-none font-medium">
+          </select>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex items-center justify-between text-gray-700">
+          <span class="font-medium">Assigned Laundry Staff:</span>
+          <span id="displayComplaintTargetStaff" class="font-bold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">STAFF01</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Issue Category *</label>
+          <select id="complaintCategory" required class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-rose-500 outline-none font-medium">
+            <option value="Missing Clothing Item">👔 Missing Clothing Item</option>
+            <option value="Damaged / Torn Clothes">✂️ Damaged / Torn Clothes</option>
+            <option value="Wash Quality & Stains">🧼 Wash Quality & Remaining Stains</option>
+            <option value="Delay in Delivery">⏱️ Delay in Delivery</option>
+            <option value="Wrong Token / Swapped Order">🏷️ Wrong Token / Swapped Order</option>
+            <option value="Re-Wash Request">🔄 Re-Wash Request</option>
+            <option value="Other General Issue">❓ Other General Issue</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Describe the Problem *</label>
+          <textarea id="complaintDescription" required rows="3" placeholder="Describe the exact issue with your laundry..."
+            class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 focus:ring-2 focus:ring-rose-500 outline-none font-medium resize-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Attach Photo Evidence (Optional)</label>
+          <input type="file" id="complaintPhotoFile" accept="image/*" onchange="handlePhotoUpload(event)"
+            class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100 cursor-pointer">
+          
+          <div id="photoPreviewContainer" class="hidden mt-2 relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
+            <img id="photoPreviewImg" src="" alt="Photo Preview" class="w-full h-full object-cover">
+            <button type="button" onclick="removePhotoUpload()" class="absolute top-1 right-1 bg-rose-600 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center">×</button>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end space-x-3 border-t border-gray-100">
+          <button type="button" onclick="closeComplaintModal()" class="px-4 py-2 text-xs font-bold text-gray-600 hover:text-gray-800 transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center">
+            <i class="fa-solid fa-paper-plane mr-2"></i> Submit Complaint
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL 2: QR CODE POPUP MODAL               -->
+  <!-- ========================================== -->
+  <div id="qrModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-sm w-full rounded-2xl shadow-2xl p-6 text-center space-y-4 animate-fadeIn">
+      <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+        <h3 class="font-bold text-gray-900 text-base">Order Token QR Code</h3>
+        <button onclick="closeQrModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 flex flex-col items-center">
+        <img id="qrModalImg" src="" alt="QR Code Token" class="w-48 h-48 object-contain rounded-lg border border-gray-300 bg-white p-2">
+        <p id="qrModalToken" class="font-mono font-bold text-indigo-700 text-sm mt-3 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">TK-21BCE0001-101</p>
+        <p id="qrModalStudent" class="text-xs text-gray-500 font-medium mt-1">Student: 21BCE0001 (Alex Smith)</p>
+      </div>
+
+      <p class="text-xs text-gray-400">Show this QR Code at the pickup counter for quick token verification.</p>
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL 3: PRINTABLE DIGITAL RECEIPT MODAL   -->
+  <!-- ========================================== -->
+  <div id="receiptModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-md w-full rounded-2xl shadow-2xl overflow-hidden animate-fadeIn">
+      
+      <div id="printableReceiptArea" class="p-6 space-y-4">
+        <div class="flex justify-between items-center border-b border-gray-200 pb-4">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center font-bold">
+              <i class="fa-solid fa-shirt"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-sm">Smart Laundry WashTrack</h3>
+              <p class="text-[10px] text-gray-400 uppercase font-bold">Official Intake Receipt</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span id="receiptTokenBadge" class="font-mono font-bold text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded border border-indigo-100">TK-101</span>
+          </div>
+        </div>
+
+        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-xs space-y-1">
+          <div class="flex justify-between"><span class="text-gray-500">Student Reg No:</span><span id="receiptReg" class="font-bold text-gray-800">21BCE0001</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Hostel & Room:</span><span id="receiptHostel" class="font-bold text-gray-800">Block A • Room 302</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Contact Mobile:</span><span id="receiptPhone" class="font-bold text-gray-800">+91 9876543210</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Date & Time:</span><span id="receiptTime" class="font-bold text-gray-800">17-09-2026 10:30</span></div>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-bold uppercase text-gray-400 mb-2">Itemized Clothing Intake</p>
+          <div id="receiptItemsList" class="bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs font-medium space-y-1">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-gray-200">
+          <div>
+            <p class="text-xs font-bold text-gray-800">Status: <span id="receiptStatus" class="text-indigo-600">Submitted</span></p>
+            <p class="text-[10px] text-gray-400">Keep token receipt safe until pickup</p>
+          </div>
+          <img id="receiptQrImg" src="" alt="QR" class="w-14 h-14 border border-gray-300 rounded p-1">
+        </div>
+      </div>
+
+      <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+        <button onclick="closeReceiptModal()" class="px-4 py-2 text-xs font-bold text-gray-600 hover:text-gray-800">Close</button>
+        <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center">
+          <i class="fa-solid fa-print mr-1.5"></i> Print / Save PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- MODAL 4: 6-DIGIT STUDENT OTP HANDOVER MODAL-->
+  <!-- ========================================== -->
+  <div id="otpModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-md w-full rounded-2xl shadow-2xl overflow-hidden animate-fadeIn border border-gray-100">
+      
+      <div class="p-5 bg-purple-600 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-white/20 text-white rounded-xl flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Student OTP Handover Verification</h3>
+            <p class="text-xs text-purple-100">Enter the 6-digit OTP received by the student</p>
+          </div>
+        </div>
+        <button onclick="closeOtpVerificationModal()" class="text-purple-200 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Target Order Summary Card -->
+        <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200 text-xs space-y-1">
+          <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-2">
+            <span id="otpTargetToken" class="font-mono font-bold text-purple-700 bg-white px-2 py-0.5 rounded border border-purple-200">TK-21BCE0001-101</span>
+            <span class="text-xs font-bold text-indigo-600">Ready for Pickup</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-gray-700">
+            <div><span class="text-gray-400">Student:</span> <span id="otpTargetStudent" class="font-bold">21BCE0001</span></div>
+            <div><span class="text-gray-400">Hostel & Room:</span> <span id="otpTargetHostel" class="font-bold">Block A • R-302</span></div>
+            <div class="col-span-2"><span class="text-gray-400">Clothes Items:</span> <span id="otpTargetItems" class="font-bold">Shirt: 2, Pant: 1</span></div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Enter 6-Digit Student Handover OTP *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-purple-600">
+              <i class="fa-solid fa-lock text-sm"></i>
+            </span>
+            <input type="text" id="inputHandoverOtp" maxlength="6" oninput="verifyOtpMatchInput()" placeholder="Enter 6-Digit OTP e.g. 482910"
+              class="w-full pl-10 pr-4 py-3 rounded-xl border border-purple-300 focus:ring-2 focus:ring-purple-500 font-mono text-center text-lg font-extrabold tracking-widest outline-none">
+          </div>
+          <p class="text-[11px] text-gray-400 mt-1">Ask the student for the 6-digit OTP displayed on their dashboard screen.</p>
+        </div>
+
+        <!-- Success Match Result Card -->
+        <div id="otpSuccessCard" class="hidden bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 text-xs text-emerald-800 font-bold flex items-center space-x-2">
+          <i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i>
+          <span>OTP Match Verified! Student identity confirmed for handover.</span>
+        </div>
+
+        <div id="otpErrorMsg" class="hidden p-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold text-center">
+          <i class="fa-solid fa-circle-xmark mr-1"></i> Invalid OTP code. Please check student dashboard screen.
+        </div>
+
+        <div class="pt-2 flex items-center justify-end space-x-3 border-t border-gray-100">
+          <button type="button" onclick="closeOtpVerificationModal()" class="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700">Cancel</button>
+          <button id="btnConfirmOtpHandover" disabled onclick="confirmOtpDelivery()" class="px-5 py-2.5 bg-gray-300 text-gray-500 cursor-not-allowed font-bold text-xs rounded-xl shadow-md transition flex items-center">
+            <i class="fa-solid fa-handshake mr-2"></i> Confirm Handover & Deliver
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Toast Notification Popup -->
+  <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 ease-in-out bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 z-50">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+    <span id="toastMsg" class="text-sm font-medium">Notification message</span>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT LOGIC                           -->
+  <!-- ========================================== -->
+  <script>
+    const API_BASE = location.protocol === "file:" ? "http://127.0.0.1:5000" : "";
+
+    let orders = [];
+    let complaints = [];
+    let tokenCounter = 103;
+    let currentRole = "staff";
+    let currentStudent = JSON.parse(localStorage.getItem("smart_laundry_active_student")) || null;
+    let currentStaff = JSON.parse(localStorage.getItem("smart_laundry_active_staff")) || null;
+    let studentFilter = "ALL";
+    let activeUploadedPhoto = null;
+    let activeOtpTargetOrder = null;
+    let otpCheckTimer = null;
+
+    async function api(path, { method = "GET", body } = {}) {
+      const res = await fetch(API_BASE + path, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : {},
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      return data;
+    }
+
+    async function refreshFromApi() {
+      const params = new URLSearchParams({ role: currentRole });
+      if (currentRole === "student" && currentStudent) params.set("regNo", currentStudent.regNo);
+      const data = await api("/api/state?" + params.toString());
+      orders = data.orders || [];
+      complaints = data.complaints || [];
+      tokenCounter = data.tokenCounter || tokenCounter;
+    }
+
+    async function refreshAndRender() {
+      try {
+        await refreshFromApi();
+      } catch (err) {
+        showToast(err.message || "Backend unavailable. Start backend/server.py", "fa-solid fa-triangle-exclamation text-amber-400");
+        return;
+      }
+      if (currentRole === "student") renderStudentOrders();
+      else {
+        renderStaffOrders();
+        renderStaffComplaints();
+        updateFormPreviews();
+      }
+    }
+
+    const statusSteps = ["Submitted", "In Wash", "Ready for Pickup", "Delivered"];
+
+    const itemLabels = {
+      shirt: "Shirt",
+      tshirt: "T-Shirt",
+      pant: "Pant",
+      shorts: "Shorts",
+      jacket: "Jacket",
+      towel: "Towel",
+      others: "Others"
+    };
+
+    function saveSession() {
+      if (currentStudent) localStorage.setItem("smart_laundry_active_student", JSON.stringify(currentStudent));
+      else localStorage.removeItem("smart_laundry_active_student");
+      if (currentStaff) localStorage.setItem("smart_laundry_active_staff", JSON.stringify(currentStaff));
+      else localStorage.removeItem("smart_laundry_active_staff");
+    }
+
+    function showToast(msg, iconClass = "fa-solid fa-circle-check text-emerald-400") {
+      const toast = document.getElementById("toast");
+      const toastMsg = document.getElementById("toastMsg");
+      const toastIcon = document.getElementById("toastIcon");
+
+      toastMsg.innerText = msg;
+      toastIcon.className = iconClass + " text-lg";
+
+      toast.classList.remove("translate-y-20", "opacity-0");
+      toast.classList.add("translate-y-0", "opacity-100");
+
+      setTimeout(() => {
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 3500);
+    }
+
+    function adjustQty(itemId, delta) {
+      const input = document.getElementById(`qty_${itemId}`);
+      if (!input) return;
+      let val = parseInt(input.value) || 0;
+      val = Math.max(0, val + delta);
+      input.value = val;
+      updateFormPreviews();
+    }
+
+    function getSelectedClothingData() {
+      const parts = [];
+      let totalQty = 0;
+
+      Object.keys(itemLabels).forEach(key => {
+        const input = document.getElementById(`qty_${key}`);
+        if (input) {
+          const qty = parseInt(input.value) || 0;
+          if (qty > 0) {
+            parts.push(`${itemLabels[key]}: ${qty}`);
+            totalQty += qty;
+          }
+        }
+      });
+
+      return { summary: parts.join(", "), totalQty: totalQty };
+    }
+
+    async function updateFormPreviews() {
+      const data = getSelectedClothingData();
+      const reg = (document.getElementById("inputFormReg").value || "21BCE0001").trim().toUpperCase() || "21BCE0001";
+
+      document.getElementById("badgeTotalItems").innerText = `${data.totalQty} Total Items`;
+      document.getElementById("previewClothesSummary").innerText = data.summary || "No items selected yet";
+      document.getElementById("previewToken").innerText = `TK-${reg}-${tokenCounter}`;
+      try {
+        const preview = await api("/api/meta/next-token?regNo=" + encodeURIComponent(reg));
+        tokenCounter = preview.tokenCounter;
+        document.getElementById("previewToken").innerText = preview.token;
+      } catch (_) {}
+    }
+
+    function switchRole(role) {
+      currentRole = role;
+      const btnStudent = document.getElementById("btnRoleStudent");
+      const btnStaff = document.getElementById("btnRoleStaff");
+      const btnLogout = document.getElementById("btnLogout");
+
+      if (role === "student") {
+        btnStudent.className = "px-3.5 py-1.5 rounded-lg transition duration-150 bg-white text-indigo-700 shadow-sm font-bold";
+        btnStaff.className = "px-3.5 py-1.5 rounded-lg transition duration-150 text-indigo-100 hover:text-white font-semibold";
+
+        if (currentStudent) {
+          showScreen("studentDashboardSection");
+          btnLogout.classList.remove("hidden");
+          refreshAndRender();
+        } else {
+          showScreen("studentLoginSection");
+          btnLogout.classList.add("hidden");
+        }
+      } else {
+        btnStaff.className = "px-3.5 py-1.5 rounded-lg transition duration-150 bg-white text-indigo-700 shadow-sm font-bold";
+        btnStudent.className = "px-3.5 py-1.5 rounded-lg transition duration-150 text-indigo-100 hover:text-white font-semibold";
+
+        if (currentStaff) {
+          showScreen("staffDashboardSection");
+          btnLogout.classList.remove("hidden");
+          refreshAndRender();
+        } else {
+          showScreen("staffLoginSection");
+          btnLogout.classList.add("hidden");
+        }
+      }
+    }
+
+    function showScreen(screenId) {
+      ["studentLoginSection", "studentDashboardSection", "staffLoginSection", "staffDashboardSection"].forEach(id => {
+        const el = document.getElementById(id);
+        if (id === screenId) el.classList.remove("hidden");
+        else el.classList.add("hidden");
+      });
+    }
+
+    function logout() {
+      if (currentRole === "student") {
+        currentStudent = null;
+        saveSession();
+        switchRole("student");
+        showToast("Logged out of Student Portal", "fa-solid fa-info-circle text-blue-400");
+      } else {
+        currentStaff = null;
+        saveSession();
+        switchRole("staff");
+        showToast("Logged out of Staff Portal", "fa-solid fa-info-circle text-purple-400");
+      }
+    }
+
+    async function handleStudentLogin(e) {
+      e.preventDefault();
+      const regNo = document.getElementById("inputStudentReg").value.trim();
+      const name = document.getElementById("inputStudentName").value.trim() || "Student";
+      const hostel = document.getElementById("inputStudentHostel").value;
+      const room = document.getElementById("inputStudentRoom").value.trim() || "302";
+      const phone = document.getElementById("inputStudentPhone").value.trim() || "+91 9876543210";
+
+      if (!regNo) {
+        showToast("Please enter a registration number", "fa-solid fa-triangle-exclamation text-amber-400");
+        return;
+      }
+
+      try {
+        const data = await api("/api/auth/student", {
+          method: "POST",
+          body: { regNo, name, hostel, room, phone }
+        });
+        currentStudent = data.student;
+        saveSession();
+        switchRole("student");
+        showToast(`Welcome ${currentStudent.name} (${currentStudent.regNo})`);
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    async function handleStaffLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById("inputStaffEmail").value.trim();
+      const pass = document.getElementById("inputStaffPass").value.trim();
+
+      if (!email || !pass) {
+        showToast("Please fill in email and password", "fa-solid fa-triangle-exclamation text-amber-400");
+        return;
+      }
+
+      try {
+        const data = await api("/api/auth/staff", { method: "POST", body: { email, password: pass } });
+        currentStaff = data.staff;
+        saveSession();
+        switchRole("staff");
+        showToast(`Staff session authenticated: ${currentStaff.email}`);
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    function setStudentFilter(filter) {
+      studentFilter = filter;
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.className = "filter-btn text-xs px-3.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold transition";
+      });
+
+      if (filter === "ALL") document.getElementById("filterAll").className = "filter-btn text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white font-bold transition";
+      if (filter === "Active") document.getElementById("filterActive").className = "filter-btn text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white font-bold transition";
+      if (filter === "Delivered") document.getElementById("filterDelivered").className = "filter-btn text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white font-bold transition";
+
+      renderStudentOrders();
+    }
+
+    function renderStudentOrders() {
+      if (!currentStudent) return;
+
+      document.getElementById("displayStudentWelcome").innerText = `Welcome, ${currentStudent.name}`;
+      document.getElementById("displayStudentReg").innerText = `Reg No: ${currentStudent.regNo} | Phone: ${currentStudent.phone || '+91 9876543210'}`;
+      document.getElementById("displayStudentHostelRoom").innerText = `${currentStudent.hostel || "Block A (Men's)"} • Room ${currentStudent.room || '302'}`;
+
+      const searchQuery = (document.getElementById("studentSearch").value || "").toLowerCase();
+      const container = document.getElementById("studentOrdersList");
+
+      let filtered = orders.filter(o => o.studentRegNo.toUpperCase() === currentStudent.regNo.toUpperCase());
+
+      const totalItemsUsed = filtered.reduce((acc, curr) => acc + (curr.totalQuantity || 0), 0);
+      const remainingQuota = Math.max(0, 10 - totalItemsUsed);
+      const pct = Math.min(100, Math.round((totalItemsUsed / 10) * 100));
+
+      document.getElementById("displayQuotaUsedText").innerText = `${totalItemsUsed} / 10 Items Used`;
+      document.getElementById("displayQuotaPercent").innerText = `${pct}%`;
+      document.getElementById("displayQuotaBar").style.width = `${pct}%`;
+      
+      const qBadge = document.getElementById("quotaBadgeText");
+      if (remainingQuota > 0) {
+        qBadge.innerText = `${remainingQuota} Free Items Left`;
+        qBadge.className = "text-xs font-bold bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/30";
+      } else {
+        qBadge.innerText = "Weekly Free Quota Exhausted";
+        qBadge.className = "text-xs font-bold bg-rose-500/20 text-rose-400 px-2.5 py-1 rounded-full border border-rose-500/30";
+      }
+
+      const totalCount = filtered.length;
+      const activeCount = filtered.filter(o => o.status !== "Delivered" && o.status !== "Completed").length;
+      const completedCount = totalCount - activeCount;
+
+      document.getElementById("studentStatTotal").innerText = totalCount;
+      document.getElementById("studentStatActive").innerText = activeCount;
+      document.getElementById("studentStatCompleted").innerText = completedCount;
+
+      if (studentFilter === "Active") {
+        filtered = filtered.filter(o => o.status !== "Delivered" && o.status !== "Completed");
+      } else if (studentFilter === "Delivered") {
+        filtered = filtered.filter(o => o.status === "Delivered" || o.status === "Completed");
+      }
+
+      if (searchQuery) {
+        filtered = filtered.filter(o => 
+          o.token.toLowerCase().includes(searchQuery) || 
+          o.clothesDetails.toLowerCase().includes(searchQuery) ||
+          o.status.toLowerCase().includes(searchQuery)
+        );
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center">
+            <i class="fa-solid fa-box-open text-4xl text-gray-300 mb-2"></i>
+            <h4 class="font-bold text-gray-700 text-base">No Laundry Orders Found</h4>
+            <p class="text-xs text-gray-400 mt-1">No orders match Reg No: ${currentStudent.regNo}</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(order => {
+        let normalizedStatus = order.status === "Completed" ? "Delivered" : order.status;
+        let currentIdx = statusSteps.indexOf(normalizedStatus);
+        if (currentIdx === -1) currentIdx = 0;
+
+        const hasComplaint = complaints.some(c => c.token === order.token);
+
+        return `
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4 hover:shadow-md transition">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
+              <div class="flex items-center space-x-3">
+                <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-mono font-bold text-xs rounded-lg border border-indigo-100">
+                  <i class="fa-solid fa-ticket mr-1"></i> ${order.token}
+                </span>
+                <span class="text-xs text-gray-500 font-medium">
+                  <i class="fa-regular fa-clock mr-1"></i> ${order.submissionDateTime}
+                </span>
+              </div>
+              <div class="flex items-center space-x-2">
+                ${hasComplaint ? `
+                  <span class="px-2.5 py-1 bg-rose-50 text-rose-600 font-bold text-[11px] rounded-lg border border-rose-100">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> Issue Reported
+                  </span>
+                ` : ''}
+                <span class="px-3 py-1 rounded-full text-xs font-bold ${
+                  normalizedStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                }">
+                  <i class="${normalizedStatus === 'Delivered' ? 'fa-solid fa-check-circle' : 'fa-solid fa-spinner animate-spin'} mr-1"></i> ${normalizedStatus}
+                </span>
+              </div>
+            </div>
+
+            <!-- Prominent OTP Banner when Ready for Pickup -->
+            ${normalizedStatus === 'Ready for Pickup' ? `
+              <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-sm">
+                    <i class="fa-solid fa-key"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-emerald-900 text-sm">Laundry is Ready for Pickup!</h4>
+                    <p class="text-xs text-emerald-700">Share this 6-digit OTP with the staff counter during pickup</p>
+                  </div>
+                </div>
+                <div class="bg-white px-4 py-2 rounded-xl border border-emerald-300 shadow-sm text-center">
+                  <span class="text-[10px] uppercase font-bold text-gray-400 block">Pickup OTP</span>
+                  <span class="font-mono font-extrabold text-xl text-emerald-600 tracking-widest">${order.handoverOtp || "------"}</span>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                <p class="text-gray-400 font-bold uppercase text-[10px]">Clothes Breakdown</p>
+                <p class="font-bold text-gray-800 text-sm mt-0.5">${order.clothesDetails}</p>
+                ${order.ironingRequested ? `
+                  <span class="inline-flex items-center mt-1.5 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                    🔥 Ironing Included
+                  </span>
+                ` : ''}
+              </div>
+              <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                <p class="text-gray-400 font-bold uppercase text-[10px]">Total Quantity</p>
+                <p class="font-bold text-gray-800 text-sm mt-0.5">${order.totalQuantity} Items</p>
+              </div>
+              <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+                <p class="text-gray-400 font-bold uppercase text-[10px]">Hostel & Room</p>
+                <p class="font-bold text-gray-800 text-sm mt-0.5">${order.hostelBlock || "Block A"} • R-${order.roomNo || "302"}</p>
+              </div>
+            </div>
+
+            <!-- Stepper -->
+            <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div class="w-full">
+                <div class="grid grid-cols-4 gap-2 text-center relative">
+                  ${statusSteps.map((step, idx) => {
+                    let cls = "step-pending";
+                    let icon = "fa-circle";
+                    if (idx < currentIdx) { cls = "step-completed"; icon = "fa-check"; }
+                    else if (idx === currentIdx) {
+                      cls = normalizedStatus === "Delivered" ? "step-completed" : "step-active";
+                      icon = normalizedStatus === "Delivered" ? "fa-check" : "fa-spinner animate-spin";
+                    }
+                    return `
+                      <div class="flex flex-col items-center">
+                        <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold ${cls} transition">
+                          <i class="fa-solid ${icon}"></i>
+                        </div>
+                        <span class="text-[10px] mt-1.5 font-bold ${idx <= currentIdx ? 'text-gray-800' : 'text-gray-400'}">${step}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                <button onclick="openQrModal('${order.token}', '${order.studentRegNo}', '${order.studentName || 'Student'}')" class="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl transition flex items-center">
+                  <i class="fa-solid fa-qrcode mr-1"></i> QR
+                </button>
+                <button onclick="openReceiptModal('${order.token}')" class="text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-300 px-3 py-1.5 rounded-xl transition flex items-center">
+                  <i class="fa-solid fa-receipt mr-1"></i> Receipt
+                </button>
+
+                ${normalizedStatus === 'Delivered' ? `
+                  <button onclick="requestReWash('${order.token}')" class="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl transition flex items-center">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Re-Wash
+                  </button>
+                ` : `
+                  <button onclick="openComplaintModalForToken('${order.token}', '${order.staffUid || 'STAFF01'}')" class="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-xl transition flex items-center">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> Report
+                  </button>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Staff Orders Table with OTP Handover Verification Restriction
+    function renderStaffOrders() {
+      const searchQuery = (document.getElementById("staffSearchInput").value || "").toLowerCase();
+      const filterStatus = document.getElementById("staffStatusFilter").value;
+      const tbody = document.getElementById("staffOrdersTableBody");
+
+      let filtered = [...orders];
+
+      if (filterStatus !== "ALL") {
+        filtered = filtered.filter(o => {
+          let norm = o.status === "Completed" ? "Delivered" : o.status;
+          return norm === filterStatus;
+        });
+      }
+
+      if (searchQuery) {
+        filtered = filtered.filter(o => 
+          o.token.toLowerCase().includes(searchQuery) ||
+          o.studentRegNo.toLowerCase().includes(searchQuery) ||
+          (o.studentName && o.studentName.toLowerCase().includes(searchQuery)) ||
+          o.clothesDetails.toLowerCase().includes(searchQuery)
+        );
+      }
+
+      document.getElementById("staffOrderCountBadge").innerText = `${filtered.length} Orders`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="p-8 text-center text-gray-400">
+              <i class="fa-solid fa-box-open text-3xl mb-2"></i>
+              <p class="text-xs font-bold">No orders found matching filter criteria</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(order => {
+        let normStatus = order.status === "Completed" ? "Delivered" : order.status;
+
+        return `
+          <tr class="hover:bg-purple-50/40 transition border-b border-gray-100">
+            <td class="p-3.5">
+              <div class="flex items-center space-x-2">
+                <span class="font-mono font-bold text-xs bg-purple-50 text-purple-700 px-2.5 py-1 rounded border border-purple-100">${order.token}</span>
+                <button onclick="openQrModal('${order.token}', '${order.studentRegNo}', '${order.studentName || 'Student'}')" class="text-gray-400 hover:text-purple-600"><i class="fa-solid fa-qrcode"></i></button>
+              </div>
+              <p class="font-bold text-gray-800 text-xs mt-1">${order.studentRegNo} <span class="text-gray-400 font-normal">(${order.studentName || 'Student'})</span></p>
+            </td>
+            <td class="p-3.5">
+              <p class="font-bold text-gray-700">${order.hostelBlock || "Block A (Men's)"}</p>
+              <p class="text-[11px] text-gray-400">Room: ${order.roomNo || "302"} | Ph: ${order.studentPhone || "+91 9876543210"}</p>
+            </td>
+            <td class="p-3.5">
+              <p class="font-bold text-gray-800">${order.clothesDetails}</p>
+              <p class="text-[11px] text-purple-600 font-bold">${order.totalQuantity} Items Total</p>
+              ${order.ironingRequested ? `
+                <span class="inline-flex items-center mt-1 bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                  🔥 Ironing
+                </span>
+              ` : ''}
+            </td>
+            <td class="p-3.5">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                normStatus === 'Delivered' ? 'bg-emerald-100 text-emerald-800' : normStatus === 'Ready for Pickup' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200 animate-pulse' : 'bg-amber-100 text-amber-800'
+              }">
+                <i class="${normStatus === 'Delivered' ? 'fa-solid fa-check-circle' : 'fa-solid fa-spinner animate-spin'} mr-1"></i> ${normStatus}
+              </span>
+            </td>
+            <td class="p-3.5 text-right space-x-1">
+              ${normStatus === 'Submitted' ? `
+                <button onclick="advanceOrderStatus('${order.token}', 'In Wash')" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg shadow-2xs transition">
+                  Move to In Wash <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+              ` : normStatus === 'In Wash' ? `
+                <button onclick="advanceOrderStatus('${order.token}', 'Ready for Pickup')" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg shadow-2xs transition">
+                  Ready for Pickup <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+              ` : normStatus === 'Ready for Pickup' ? `
+                <button onclick="openOtpVerificationModal('${order.token}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition animate-bounce">
+                  <i class="fa-solid fa-key mr-1"></i> Enter OTP to Deliver
+                </button>
+              ` : `
+                <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  <i class="fa-solid fa-circle-check mr-1"></i> Delivered
+                </span>
+              `}
+              <button onclick="openReceiptModal('${order.token}')" class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-lg transition" title="Print Digital Receipt">
+                <i class="fa-solid fa-print"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function advanceOrderStatus(token, targetStatus) {
+      if (targetStatus === "Delivered") {
+        openOtpVerificationModal(token);
+        return;
+      }
+      try {
+        await api("/api/orders/" + encodeURIComponent(token) + "/status", {
+          method: "POST",
+          body: { status: targetStatus }
+        });
+        await refreshAndRender();
+        showToast(`Token ${token} updated to '${targetStatus}'`, "fa-solid fa-circle-check text-purple-400");
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    async function handleStaffSubmitOrder(e) {
+      e.preventDefault();
+      const reg = (document.getElementById("inputFormReg").value || "").trim().toUpperCase();
+      const hostel = document.getElementById("inputFormHostel").value;
+      const room = document.getElementById("inputFormRoom").value.trim() || "302";
+      const ironingRequested = document.getElementById("checkIroning").checked;
+      const clothingData = getSelectedClothingData();
+
+      if (!reg) {
+        showToast("Please enter a Student Registration Number", "fa-solid fa-triangle-exclamation text-amber-400");
+        return;
+      }
+      if (clothingData.totalQty === 0) {
+        showToast("Please select at least 1 clothing item quantity", "fa-solid fa-triangle-exclamation text-amber-400");
+        return;
+      }
+
+      try {
+        const data = await api("/api/orders", {
+          method: "POST",
+          body: {
+            studentRegNo: reg,
+            hostelBlock: hostel,
+            roomNo: room,
+            staffUid: currentStaff ? (currentStaff.uid || currentStaff.email.split("@")[0].toUpperCase()) : "STAFF01",
+            clothesDetails: clothingData.summary,
+            totalQuantity: clothingData.totalQty,
+            ironingRequested
+          }
+        });
+
+        Object.keys(itemLabels).forEach(key => {
+          const input = document.getElementById(`qty_${key}`);
+          if (input) input.value = "0";
+        });
+        document.getElementById("checkIroning").checked = false;
+
+        await refreshAndRender();
+        const ironingMsg = ironingRequested ? " + Ironing" : "";
+        showToast(`Order created! Token: ${data.order.token}${ironingMsg}`, "fa-solid fa-circle-check text-emerald-400");
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    function openOtpVerificationModal(token) {
+      const order = orders.find(o => o.token === token);
+      if (!order) return;
+
+      activeOtpTargetOrder = order;
+
+      document.getElementById("otpTargetToken").innerText = order.token;
+      document.getElementById("otpTargetStudent").innerText = `${order.studentRegNo} (${order.studentName || 'Student'})`;
+      document.getElementById("otpTargetHostel").innerText = `${order.hostelBlock || "Block A"} • R-${order.roomNo || "302"}`;
+      document.getElementById("otpTargetItems").innerText = order.clothesDetails;
+
+      const input = document.getElementById("inputHandoverOtp");
+      input.value = "";
+      document.getElementById("otpSuccessCard").classList.add("hidden");
+      document.getElementById("otpErrorMsg").classList.add("hidden");
+
+      const btn = document.getElementById("btnConfirmOtpHandover");
+      btn.disabled = true;
+      btn.className = "px-5 py-2.5 bg-gray-300 text-gray-500 cursor-not-allowed font-bold text-xs rounded-xl shadow-md transition flex items-center";
+
+      document.getElementById("otpModal").classList.remove("hidden");
+    }
+
+    function closeOtpVerificationModal() {
+      document.getElementById("otpModal").classList.add("hidden");
+    }
+
+    function setOtpButtonEnabled(enabled) {
+      const btn = document.getElementById("btnConfirmOtpHandover");
+      btn.disabled = !enabled;
+      btn.className = enabled
+        ? "px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center cursor-pointer"
+        : "px-5 py-2.5 bg-gray-300 text-gray-500 cursor-not-allowed font-bold text-xs rounded-xl shadow-md transition flex items-center";
+    }
+
+    function verifyOtpMatchInput() {
+      if (!activeOtpTargetOrder) return;
+      const typedOtp = (document.getElementById("inputHandoverOtp").value || "").trim();
+      const successCard = document.getElementById("otpSuccessCard");
+      const errCard = document.getElementById("otpErrorMsg");
+
+      if (otpCheckTimer) clearTimeout(otpCheckTimer);
+
+      if (typedOtp.length < 6) {
+        successCard.classList.add("hidden");
+        errCard.classList.add("hidden");
+        setOtpButtonEnabled(false);
+        return;
+      }
+
+      otpCheckTimer = setTimeout(async () => {
+        try {
+          const result = await api("/api/orders/" + encodeURIComponent(activeOtpTargetOrder.token) + "/check-otp", {
+            method: "POST",
+            body: { otp: typedOtp }
+          });
+          if (result.match) {
+            successCard.classList.remove("hidden");
+            errCard.classList.add("hidden");
+            setOtpButtonEnabled(true);
+          } else {
+            successCard.classList.add("hidden");
+            errCard.classList.remove("hidden");
+            setOtpButtonEnabled(false);
+          }
+        } catch (err) {
+          successCard.classList.add("hidden");
+          errCard.classList.remove("hidden");
+          setOtpButtonEnabled(false);
+        }
+      }, 200);
+    }
+
+    async function confirmOtpDelivery() {
+      if (!activeOtpTargetOrder) return;
+      const typedOtp = (document.getElementById("inputHandoverOtp").value || "").trim();
+      try {
+        await api("/api/orders/" + encodeURIComponent(activeOtpTargetOrder.token) + "/deliver", {
+          method: "POST",
+          body: { otp: typedOtp }
+        });
+        const token = activeOtpTargetOrder.token;
+        closeOtpVerificationModal();
+        await refreshAndRender();
+        showToast(`OTP Verified! Token ${token} marked as Delivered`, "fa-solid fa-circle-check text-emerald-400");
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    // Complaints Handlers
+    function renderStaffComplaints() {
+      const container = document.getElementById("staffComplaintsList");
+      const badge = document.getElementById("badgeOpenComplaints");
+
+      const pendingCount = complaints.filter(c => c.status !== "Resolved").length;
+      badge.innerText = `${pendingCount} Open Reports`;
+
+      if (complaints.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-2 text-center p-6 bg-gray-50 rounded-xl border border-gray-200 text-gray-400 text-xs">
+            <i class="fa-solid fa-check-double text-2xl mb-1 text-emerald-400"></i>
+            <p class="font-bold">No active student complaints</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = complaints.map(c => `
+        <div class="bg-gray-50 p-4 rounded-xl border ${c.status === 'Resolved' ? 'border-gray-200 opacity-75' : 'border-rose-200'} space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-xs bg-white text-rose-700 px-2 py-0.5 rounded border border-rose-200">${c.token}</span>
+            <span class="text-[11px] font-bold ${c.status === 'Resolved' ? 'text-emerald-700 bg-emerald-100' : 'text-rose-700 bg-rose-100'} px-2.5 py-0.5 rounded-full">
+              ${c.status}
+            </span>
+          </div>
+          <p class="text-xs font-bold text-gray-900">${c.category}</p>
+          <p class="text-xs text-gray-600 bg-white p-2.5 rounded-lg border border-gray-200">${c.description}</p>
+          
+          ${c.photoUrl ? `
+            <div class="pt-1">
+              <span class="text-[10px] font-bold text-gray-400 uppercase">Photo Evidence:</span>
+              <img src="${c.photoUrl}" alt="Complaint Photo" class="mt-1 w-20 h-20 object-cover rounded-lg border border-gray-300 cursor-pointer hover:opacity-90" onclick="window.open('${c.photoUrl}', '_blank')">
+            </div>
+          ` : ''}
+
+          <div class="flex items-center justify-between pt-1 text-[11px]">
+            <span class="text-gray-400">Reg: ${c.studentRegNo}</span>
+            ${c.status !== 'Resolved' ? `
+              <button onclick="resolveComplaint('${c.complaintId}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition">
+                Mark Resolved <i class="fa-solid fa-check ml-1"></i>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function resolveComplaint(id) {
+      try {
+        await api("/api/complaints/" + encodeURIComponent(id) + "/resolve", { method: "POST" });
+        await refreshAndRender();
+        showToast("Complaint marked as Resolved", "fa-solid fa-check-circle text-emerald-400");
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    function handlePhotoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        activeUploadedPhoto = evt.target.result;
+        document.getElementById("photoPreviewImg").src = activeUploadedPhoto;
+        document.getElementById("photoPreviewContainer").classList.remove("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removePhotoUpload() {
+      activeUploadedPhoto = null;
+      document.getElementById("complaintPhotoFile").value = "";
+      document.getElementById("photoPreviewContainer").classList.add("hidden");
+    }
+
+    function openComplaintModal() {
+      if (!currentStudent) return;
+      populateComplaintTokens(currentStudent.regNo);
+      document.getElementById("complaintModal").classList.remove("hidden");
+    }
+
+    function openComplaintModalForToken(token, staffUid) {
+      document.getElementById("complaintModal").classList.remove("hidden");
+      populateComplaintTokens(currentStudent ? currentStudent.regNo : null, token);
+      document.getElementById("displayComplaintTargetStaff").innerText = staffUid || "STAFF01";
+    }
+
+    function populateComplaintTokens(studentRegNo, preselectToken = null) {
+      const select = document.getElementById("complaintTokenSelect");
+      select.innerHTML = "";
+
+      let list = orders;
+      if (studentRegNo) list = orders.filter(o => o.studentRegNo.toUpperCase() === studentRegNo.toUpperCase());
+
+      if (list.length === 0) {
+        select.innerHTML = `<option value="">No tokens available</option>`;
+        return;
+      }
+
+      list.forEach(o => {
+        const opt = document.createElement("option");
+        opt.value = o.token;
+        opt.innerText = `${o.token} (${o.status} - ${o.clothesDetails})`;
+        if (preselectToken && o.token === preselectToken) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      onComplaintTokenChange();
+    }
+
+    function onComplaintTokenChange() {
+      const token = document.getElementById("complaintTokenSelect").value;
+      const order = orders.find(o => o.token === token);
+      document.getElementById("displayComplaintTargetStaff").innerText = order ? (order.staffUid || "STAFF01") : "STAFF01";
+    }
+
+    function closeComplaintModal() {
+      document.getElementById("complaintModal").classList.add("hidden");
+    }
+
+    async function submitStudentComplaint(e) {
+      e.preventDefault();
+      const token = document.getElementById("complaintTokenSelect").value;
+      const category = document.getElementById("complaintCategory").value;
+      const desc = document.getElementById("complaintDescription").value.trim();
+      const targetStaff = document.getElementById("displayComplaintTargetStaff").innerText;
+
+      if (!token || !desc) {
+        showToast("Please select a token and enter a description", "fa-solid fa-triangle-exclamation text-amber-400");
+        return;
+      }
+
+      try {
+        await api("/api/complaints", {
+          method: "POST",
+          body: {
+            token,
+            category,
+            description: desc,
+            staffUid: targetStaff,
+            studentRegNo: currentStudent ? currentStudent.regNo : "21BCE0001",
+            photoUrl: activeUploadedPhoto
+          }
+        });
+        closeComplaintModal();
+        document.getElementById("complaintDescription").value = "";
+        removePhotoUpload();
+        await refreshAndRender();
+        showToast(`Complaint filed for Token ${token}`, "fa-solid fa-circle-check text-emerald-400");
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    async function requestReWash(token) {
+      try {
+        await api("/api/orders/" + encodeURIComponent(token) + "/rewash", { method: "POST" });
+        await refreshAndRender();
+        showToast(`Re-Wash Request submitted for Token ${token}`, "fa-solid fa-rotate-left text-amber-400");
+      } catch (err) {
+        showToast(err.message, "fa-solid fa-triangle-exclamation text-amber-400");
+      }
+    }
+
+    // QR Code Modal
+    function openQrModal(token, regNo, studentName) {
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(token)}`;
+      document.getElementById("qrModalImg").src = qrUrl;
+      document.getElementById("qrModalToken").innerText = token;
+      document.getElementById("qrModalStudent").innerText = `Student: ${regNo} (${studentName})`;
+      document.getElementById("qrModal").classList.remove("hidden");
+    }
+
+    function closeQrModal() {
+      document.getElementById("qrModal").classList.add("hidden");
+    }
+
+    // Receipt Modal
+    function openReceiptModal(token) {
+      const order = orders.find(o => o.token === token);
+      if (!order) return;
+
+      document.getElementById("receiptTokenBadge").innerText = order.token;
+      document.getElementById("receiptReg").innerText = `${order.studentRegNo} (${order.studentName || 'Student'})`;
+      document.getElementById("receiptHostel").innerText = `${order.hostelBlock || "Block A (Men's)"} • Room ${order.roomNo || "302"}`;
+      document.getElementById("receiptPhone").innerText = order.studentPhone || "+91 9876543210";
+      document.getElementById("receiptTime").innerText = order.submissionDateTime;
+      document.getElementById("receiptStatus").innerText = order.status;
+
+      const itemsList = document.getElementById("receiptItemsList");
+      itemsList.innerHTML = `
+        <div class="flex justify-between border-b border-gray-200 pb-1 font-bold">
+          <span>Item Details</span><span>Quantity</span>
+        </div>
+        <div class="flex justify-between pt-1">
+          <span>${order.clothesDetails}</span><span class="font-bold">${order.totalQuantity} Items</span>
+        </div>
+        ${order.ironingRequested ? `
+        <div class="flex justify-between pt-1 border-t border-dashed border-amber-200 mt-1">
+          <span class="text-amber-700 font-bold">🔥 Ironing Service</span>
+          <span class="text-amber-700 font-bold">Included</span>
+        </div>
+        ` : ''}
+      `;
+
+      document.getElementById("receiptQrImg").src = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(order.token)}`;
+      document.getElementById("receiptModal").classList.remove("hidden");
+    }
+
+    function closeReceiptModal() {
+      document.getElementById("receiptModal").classList.add("hidden");
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      switchRole("staff");
+    });
+  </script>
+</body>
+</html>
